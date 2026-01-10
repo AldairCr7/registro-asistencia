@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Registro de asistencia</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#1f8feb;--muted:#9aa7bf;--ok:#21c07a}
+    *{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; background:linear-gradient(180deg,#071226 0%, #0b1826 100%); color:#e6eef6; margin:0; padding:24px}
+    .container{max-width:980px;margin:0 auto}
+    header{display:flex;gap:16px;align-items:center;justify-content:space-between}
+    h1{font-size:1.25rem;margin:0}
+    .card{background:rgba(255,255,255,0.03);padding:16px;border-radius:12px;margin-top:16px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .workers{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:12px}
+    label.worker{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:rgba(255,255,255,0.01);cursor:pointer}
+    input[type=checkbox]{width:18px;height:18px}
+    .meta{font-size:0.9rem;color:var(--muted)}
+    button{background:var(--accent);color:white;padding:8px 12px;border:none;border-radius:8px;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06)}
+    .small{font-size:0.85rem;padding:6px 8px}
+    .flex{display:flex;gap:8px;align-items:center}
+    .summary{margin-top:12px}
+    .weekGroup{border-left:3px solid rgba(255,255,255,0.03);padding:10px;margin-top:8px}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.04);font-size:0.8rem}
+    .ok{color:var(--ok);font-weight:600}
+    .controls{display:flex;gap:8px;flex-wrap:wrap}
+    footer{margin-top:18px;color:var(--muted);font-size:0.85rem}
+    input[type=text]{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    .danger{background:#8b2323}
+    .note{font-size:0.85rem;color:var(--muted);margin-top:8px}
+    @media (max-width:640px){header{flex-direction:column;align-items:flex-start}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Registro de asistencia</h1>
+        <div class="meta" id="currentMeta">Cargando fecha...</div>
+      </div>
+      <div class="flex">
+        <div class="badge" id="weekBadge">Semana ?</div>
+      </div>
+    </header>
+
+    <section class="card">
+      <strong>Trabajadores</strong>
+      <div class="note">Recuerda no guardar dos registros el mismo dia</div>
+
+      <!-- Removed: input + add/reset controls. Workers list remains. -->
+      <div class="workers card" id="workersList" aria-live="polite"></div>
+
+      <div style="margin-top:12px" class="flex">
+        <button id="registerBtn">Registrar</button>
+        <button id="showAll" class="ghost small">Ver registros</button>
+        <button id="clearRecords" class="danger small">Borrar local</button>
+      </div>
+
+      <div id="feedback" class="note"></div>
+    </section>
+
+    <section class="card summary">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong>Historial / Resumen (desde Firebase)</strong>
+        <div class="flex">
+          <select id="filterWeek">
+            <option value="all">Todas las semanas</option>
+          </select>
+          <button id="refreshSummary" class="small ghost">Refrescar</button>
+        </div>
+      </div>
+
+      <div id="summaryContainer"></div>
+    </section>
+
+    <footer>
+      Construcciones Contreras en Colaboración del Ingeniero Contreras.
+    </footer>
+  </div>
+
+  <script>
+    // --- Utilidades de fecha ---
+    const dayNames = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+
+    function getISOWeekNumber(date) {
+      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+      const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+      return { week: weekNo, year: d.getUTCFullYear() };
+    }
+
+    function formatDateLocal(date){
+      return date.toLocaleDateString();
+    }
+
+    // --- Storage keys ---
+    const KEY_WORKERS = 'attendance_workers_v1';
+    const KEY_RECORDS = 'attendance_records_v1'; // se usa para offline/local
+
+    // --- Default workers (edítalos solo en el código) ---
+    const DEFAULT_WORKERS = ["Fer","Sebas","Don Fer","Gordo","Toñito","Migue","Yorby"];
+
+    // FORZAR uso de DEFAULT_WORKERS: ignorar cualquier lista guardada en localStorage
+    function loadWorkers(){
+      return DEFAULT_WORKERS.slice();
+    }
+    function saveWorkers(list){ /* no-op: no se usa desde UI */ }
+
+    function loadRecords(){ try{const raw=localStorage.getItem(KEY_RECORDS); return raw?JSON.parse(raw):[];}catch(e){console.error(e);return[]} }
+    function saveRecords(records){ localStorage.setItem(KEY_RECORDS, JSON.stringify(records)); }
+
+    // --- UI ---
+    const workersListEl = document.getElementById('workersList');
+    const feedback = document.getElementById('feedback');
+    const weekBadge = document.getElementById('weekBadge');
+    const currentMeta = document.getElementById('currentMeta');
+
+    function renderWorkers(){
+      const workers = loadWorkers();
+      workersListEl.innerHTML = '';
+      workers.forEach((w, idx)=>{
+        const id = 'w_'+idx;
+        const label = document.createElement('label');
+        label.className = 'worker';
+        label.innerHTML = `<input type='checkbox' data-worker-index='${idx}' id='${id}'/><span>${w}</span>`;
+        workersListEl.appendChild(label);
+      });
+    }
+
+    function renderCurrentMeta(){
+      const now = new Date();
+      const dayName = dayNames[now.getDay()];
+      const iso = getISOWeekNumber(now);
+      currentMeta.textContent = `${dayName}, ${formatDateLocal(now)} — Semana ${iso.week} (${iso.year})`;
+      weekBadge.textContent = `Semana ${iso.week} / ${iso.year}`;
+    }
+
+    // --- Firebase config (deja como está) ---
+    const FIREBASE_ENABLED = true;
+    const firebaseConfig = {
+      apiKey: "AIzaSyAwky0ciFYNgprLHFb6sOA4TThLeb20d08",
+      authDomain: "ingresotrabajadores-f2d8e.firebaseapp.com",
+      projectId: "ingresotrabajadores-f2d8e",
+      storageBucket: "ingresotrabajadores-f2d8e.firebasestorage.app",
+      messagingSenderId: "247478996358",
+      appId: "1:247478996358:web:6cca329c3ef2ce129a7007",
+      measurementId: "G-X99PFZ53YZ"
+    };
+
+    function loadFirebaseSDKs(){
+      if(!FIREBASE_ENABLED) return Promise.resolve();
+      if(window.firebase) return Promise.resolve();
+      return new Promise((resolve, reject)=>{
+        const urls = [
+          'https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js',
+          'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js'
+        ];
+        let loaded = 0;
+        urls.forEach(u=>{
+          const s = document.createElement('script'); s.src = u;
+          s.onload = ()=>{ loaded++; if(loaded===urls.length) resolve(); };
+          s.onerror = (e)=> reject(e);
+          document.head.appendChild(s);
+        });
+      });
+    }
+
+    function initFirebaseApp(){
+      if(!FIREBASE_ENABLED) return Promise.resolve();
+      return loadFirebaseSDKs().then(()=>{
+        if(!window.firebase) throw new Error('Firebase SDK no cargado');
+        if(!firebase.apps.length){ firebase.initializeApp(firebaseConfig); }
+        window.db = firebase.firestore();
+      });
+    }
+
+    // --- Push a Firebase: solo dos campos (Fecha, Trabajadores) como strings ---
+    function pushRecordToFirebase_minimal(rec){
+      if(!FIREBASE_ENABLED) return Promise.reject(new Error('FIREBASE_DISABLED'));
+      return initFirebaseApp().then(()=>{
+        const data = {
+          Fecha: rec.dateISO, // ISO string
+          Trabajadores: Array.isArray(rec.workers) ? rec.workers.join(';') : String(rec.workers)
+        };
+        // colección "Registros" (asegúrate que en Firestore existe/puede escribirse)
+        return db.collection('Registros').add(data);
+      });
+    }
+
+    // --- Fetch from Firebase and render ONLY those two fields, grouped por semana ---
+    async function fetchAndRenderFromFirebase(filterWeekKey){
+      if(!FIREBASE_ENABLED){ feedback.textContent='Firebase no habilitado'; return; }
+      try{
+        await initFirebaseApp();
+        const snapshot = await db.collection('Registros').orderBy('Fecha','desc').get();
+        const recs = snapshot.docs.map(doc=>{
+          const d = doc.data() || {};
+          const dateISO = d.Fecha || new Date().toISOString();
+          const dt = new Date(dateISO);
+          const iso = getISOWeekNumber(dt);
+          return {
+            id: doc.id,
+            dateISO,
+            dateDisplay: dt.toLocaleDateString(),
+            dayName: dayNames[dt.getDay()] || '',
+            week: iso.week,
+            year: iso.year,
+            workers: d.Trabajadores ? String(d.Trabajadores).split(';').map(s=>s.trim()).filter(Boolean) : []
+          };
+        });
+
+        renderRecordsGrouped(recs, filterWeekKey);
+        feedback.textContent = `Registros cargados desde Firebase (${recs.length})`;
+        feedback.style.color = 'var(--muted)';
+      }catch(e){
+        console.error(e);
+        feedback.textContent = 'Error cargando registros desde Firebase: '+(e.message||e);
+        feedback.style.color = 'var(--muted)';
+      }
+    }
+
+    // --- Render agrupado (reutiliza estructura existente) ---
+    function renderRecordsGrouped(records, filterWeekKey){
+      const container = document.getElementById('summaryContainer');
+      if(!records || records.length===0){ container.innerHTML = '<div class="note">No hay registros todavía.</div>'; populateFilter([]); return; }
+      const groups = {};
+      records.forEach(rec=>{
+        const key = rec.year + '-W' + String(rec.week).padStart(2,'0');
+        if(!groups[key]) groups[key]=[];
+        groups[key].push(rec);
+      });
+      const keys = Object.keys(groups).sort().reverse();
+      populateFilter(keys);
+
+      let html = '';
+      keys.forEach(key=>{
+        if(filterWeekKey && filterWeekKey!=='all' && key!==filterWeekKey) return;
+        html += `<div class="weekGroup"><div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${key}</strong> <span class="meta">(${groups[key].length} registros)</span></div><div class="badge">${key.split('-W')[1]} / ${key.split('-W')[0]}</div></div>`;
+        groups[key].sort((a,b)=>b.dateISO.localeCompare(a.dateISO)).forEach(r=>{
+          html += `<div style="margin-top:8px;padding:8px;border-radius:8px;background:rgba(255,255,255,0.01)"><div style="display:flex;justify-content:space-between"><div><strong>${r.dayName} ${r.dateDisplay}</strong></div><div class="meta">${r.workers.length} presentes</div></div><div class="meta">${r.workers.join(', ')}</div></div>`;
+        });
+        html += `</div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    function populateFilter(keys){
+      const sel = document.getElementById('filterWeek');
+      const prev = sel.value || 'all';
+      sel.innerHTML = '<option value="all">Todas las semanas</option>';
+      keys.forEach(k=>{ const opt = document.createElement('option'); opt.value = k; opt.textContent = k; sel.appendChild(opt); });
+      try{ sel.value = prev; }catch(e){}
+    }
+
+    document.getElementById('filterWeek').addEventListener('change', ()=>{
+      fetchAndRenderFromFirebase(document.getElementById('filterWeek').value);
+    });
+
+    document.getElementById('refreshSummary').addEventListener('click', ()=>fetchAndRenderFromFirebase(document.getElementById('filterWeek').value));
+
+    document.getElementById('showAll').addEventListener('click', ()=>fetchAndRenderFromFirebase('all'));
+
+    // --- Registrar asistencia: guarda local y TAMBIÉN en Firebase (solo Fecha y Trabajadores) ---
+    document.getElementById('registerBtn').addEventListener('click', ()=>{
+      const now = new Date();
+      const iso = getISOWeekNumber(now);
+      const workers = loadWorkers();
+      const checked = [];
+      document.querySelectorAll('#workersList input[type=checkbox]').forEach(i=>{
+        if(i.checked){ const idx = parseInt(i.dataset.workerIndex,10); if(workers[idx]) checked.push(workers[idx]); }
+      });
+
+      if(checked.length===0){ feedback.textContent = 'Ningún trabajador marcado. Marca al menos uno antes de registrar.'; feedback.style.color = 'var(--muted)'; return; }
+
+      const records = loadRecords();
+      const rec = {
+        id: Date.now(),
+        dateISO: now.toISOString(),
+        dateDisplay: formatDateLocal(now),
+        dayName: dayNames[now.getDay()],
+        week: iso.week,
+        year: iso.year,
+        workers: checked
+      };
+      records.push(rec);
+      saveRecords(records);
+
+      // push minimal a Firebase (solo Fecha y Trabajadores)
+      pushRecordToFirebase_minimal(rec).then(()=>{
+        feedback.textContent = `Registrado local y en Firebase: ${checked.join(', ')} — ${rec.dateDisplay}`;
+        feedback.style.color = 'var(--ok)';
+      }).catch(e=>{
+        // mostrar error detallado en UI y consola
+        console.error('Error subiendo a Firebase:', e);
+        let msg = 'Registrado localmente (error subiendo a Firebase).';
+        if(e && e.code) msg += ' Código: ' + e.code;
+        if(e && e.message) msg += ' Mensaje: ' + e.message;
+        feedback.textContent = msg;
+        feedback.style.color = 'var(--muted)';
+      });
+
+      document.querySelectorAll('#workersList input[type=checkbox]').forEach(i=>i.checked=false);
+      renderSummary();
+    });
+
+    // --- Mantengo funcionalidad local de resumen (por defecto mostramos lo local) ---
+    function renderSummary(filterWeekKey){
+      const container = document.getElementById('summaryContainer');
+      const records = loadRecords().sort((a,b)=>b.id-a.id);
+      if(records.length===0){ container.innerHTML = '<div class="note">No hay registros locales todavía.</div>'; populateFilter([]); return; }
+      const groups = groupRecordsByWeek(records);
+      populateFilter(Object.keys(groups).sort().reverse());
+
+      let html = '';
+      const groupKeys = Object.keys(groups).sort().reverse();
+      groupKeys.forEach(key=>{
+        if(filterWeekKey && filterWeekKey!=='all' && key!==filterWeekKey) return;
+        html += `<div class="weekGroup"><div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${key}</strong> <span class="meta">(${groups[key].length} registros)</span></div><div class="badge">${key.split('-W')[1]} / ${key.split('-W')[0]}</div></div>`;
+        groups[key].sort((a,b)=>b.id-a.id).forEach(r=>{
+          html += `<div style="margin-top:8px;padding:8px;border-radius:8px;background:rgba(255,255,255,0.01)"><div style="display:flex;justify-content:space-between"><div><strong>${r.dayName} ${r.dateDisplay}</strong></div><div class="meta">${r.workers.length} presentes</div></div><div class="meta">${r.workers.join(', ')}</div></div>`;
+        });
+        html += `</div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    function groupRecordsByWeek(records){
+      const groups = {};
+      records.forEach(rec=>{
+        const key = rec.year + '-W' + String(rec.week).padStart(2,'0');
+        if(!groups[key]) groups[key]=[];
+        groups[key].push(rec);
+      });
+      return groups;
+    }
+
+    // removed add/reset event listeners (no UI to add workers)
+
+    document.getElementById('clearRecords').addEventListener('click', ()=>{ if(!confirm('¿Borrar todos los registros locales? Esta acción no se puede deshacer.')) return; localStorage.removeItem(KEY_RECORDS); renderSummary(); feedback.textContent='Registros locales borrados.'; feedback.style.color='var(--muted)'; });
+
+    // --- Inicializacion ---
+    function init(){
+      // ensure stored old workers list does not override DEFAULT_WORKERS
+      try{ localStorage.removeItem(KEY_WORKERS); }catch(e){}
+      renderWorkers();
+      renderCurrentMeta();
+      renderSummary();
+      setInterval(()=>{ renderCurrentMeta(); }, 60*1000);
+    }
+    init();
+
+  </script>
+</body>
+</html>
