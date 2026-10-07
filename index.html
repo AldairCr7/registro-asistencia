@@ -3,143 +3,172 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Registro de asistencia</title>
+  <title>Lista de asistencia</title>
   <style>
-    :root{--bg:#0f1724;--card:#0b1220;--accent:#1f8feb;--muted:#9aa7bf;--ok:#21c07a}
+    :root{
+      --bg:#f3efe6; --card:#ffffff; --text:#1b1b1b; --muted:#5b5b5b; --line:#d9d3c7;
+      --green:#1e7d32; --greenSoft:#e3f3e5; --blue:#1559b3; --red:#b3261e; --today:#fff4c2;
+    }
     *{box-sizing:border-box}
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; background:linear-gradient(180deg,#071226 0%, #0b1826 100%); color:#e6eef6; margin:0; padding:24px}
-    .container{max-width:980px;margin:0 auto}
-    header{display:flex;gap:16px;align-items:center;justify-content:space-between}
-    h1{font-size:1.25rem;margin:0}
-    .card{background:rgba(255,255,255,0.03);padding:16px;border-radius:12px;margin-top:16px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
-    .row{display:flex;gap:12px;flex-wrap:wrap}
-    .workers{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:12px}
-    label.worker{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:rgba(255,255,255,0.01);cursor:pointer}
-    input[type=checkbox]{width:18px;height:18px}
-    .meta{font-size:0.9rem;color:var(--muted)}
-    button{background:var(--accent);color:white;padding:8px 12px;border:none;border-radius:8px;cursor:pointer}
-    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06)}
-    .small{font-size:0.85rem;padding:6px 8px}
-    .flex{display:flex;gap:8px;align-items:center}
-    .summary{margin-top:12px}
-    .weekGroup{border-left:3px solid rgba(255,255,255,0.03);padding:10px;margin-top:8px}
-    .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.04);font-size:0.8rem}
-    .ok{color:var(--ok);font-weight:600}
-    .controls{display:flex;gap:8px;flex-wrap:wrap}
-    footer{margin-top:18px;color:var(--muted);font-size:0.85rem}
-    input[type=text]{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
-    .danger{background:#8b2323}
-    .note{font-size:0.85rem;color:var(--muted);margin-top:8px}
-    @media (max-width:640px){header{flex-direction:column;align-items:flex-start}}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;font-size:19px;line-height:1.35}
+    .container{max-width:900px;margin:0 auto;padding:16px}
+    h1{font-size:1.5rem;margin:0 0 4px}
+    h2{font-size:1.25rem;margin:0 0 10px}
+    .muted{color:var(--muted)}
+    .card{background:var(--card);border-radius:14px;padding:16px;margin-top:14px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+
+    /* Pestañas grandes */
+    .tabs{display:flex;gap:10px;margin-top:14px}
+    .tab{flex:1;font-size:1.1rem;font-weight:700;padding:16px 10px;border-radius:12px;border:3px solid var(--blue);background:#fff;color:var(--blue);cursor:pointer}
+    .tab.active{background:var(--blue);color:#fff}
+
+    /* Botones */
+    .btn{font-size:1.05rem;font-weight:700;padding:14px 18px;border-radius:12px;border:none;cursor:pointer;background:var(--blue);color:#fff;min-height:54px}
+    .btn.gray{background:#e4e0d8;color:var(--text)}
+    .btn.red{background:var(--red)}
+    .btn.green{background:var(--green)}
+    .btn:disabled{opacity:.35;cursor:default}
+
+    /* Estado de guardado */
+    #status{display:inline-block;margin-top:6px;padding:6px 12px;border-radius:999px;font-weight:700;font-size:1rem;background:var(--greenSoft);color:var(--green)}
+    #status.saving{background:#fff1cc;color:#7a5600}
+    #status.offline{background:#fde2e0;color:var(--red)}
+
+    /* Navegación de semana */
+    .weekNav{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .weekTitle{font-size:1.15rem;font-weight:700;text-align:center;flex:1 1 100%;order:-1;margin-bottom:6px}
+    .weekNav .btn{flex:1}
+
+    .help{background:#eef4ff;border-left:6px solid var(--blue);padding:10px 12px;border-radius:8px;margin-top:12px;font-size:1rem}
+
+    /* Tabla tipo lista de raya */
+    .tableWrap{overflow-x:auto;margin-top:12px;-webkit-overflow-scrolling:touch}
+    table{border-collapse:collapse;width:100%;min-width:100%}
+    th,td{border:1px solid var(--line);text-align:center;padding:4px}
+    th{background:#f7f5f0;font-size:.9rem;line-height:1.15;padding:6px 2px}
+    th .num{display:block;font-size:1.15rem}
+    th.today, td.today{background:var(--today)}
+    th.today .hoy{display:block;font-size:.7rem;font-weight:800;color:#7a5600}
+    td.name, th.name{text-align:left;font-weight:700;padding:6px 8px;position:sticky;left:0;background:#fff;z-index:1;min-width:92px;max-width:140px;word-break:break-word}
+    th.name{background:#f7f5f0;word-break:normal}
+    td.name .gone{display:block;font-weight:400;font-size:.75rem;color:var(--muted)}
+    td.total, th.total{font-weight:800;min-width:46px}
+    td.total{font-size:1.2rem}
+    .cell{width:46px;height:46px;border-radius:10px;border:3px solid #9a9488;background:#fff;font-size:1.7rem;font-weight:900;line-height:1;color:#fff;cursor:pointer;padding:0}
+    .cell.on{background:var(--green);border-color:var(--green)}
+    .cell.future{border-style:dashed;border-color:#ddd;background:#f6f6f6;cursor:default}
+
+    /* Trabajadores */
+    .addRow{display:flex;gap:10px;flex-wrap:wrap}
+    .addRow input{flex:1 1 200px}
+    input[type=text]{font-size:1.15rem;padding:14px;border-radius:12px;border:3px solid var(--line);min-height:54px;width:100%}
+    input[type=text]:focus{outline:none;border-color:var(--blue)}
+    .wlist{list-style:none;padding:0;margin:12px 0 0}
+    .wlist li{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--line)}
+    .wlist .wname{flex:1 1 100%;font-size:1.25rem;font-weight:700}
+    .wlist .btn{flex:1;padding:10px 14px;min-height:48px;font-size:1rem}
+    .wlist input{flex:1 1 100%}
+
+    /* Mensaje flotante */
+    #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#222;color:#fff;padding:14px 20px;border-radius:12px;font-size:1.05rem;font-weight:700;max-width:92vw;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}
+    #toast.show{opacity:1}
+
+    /* Ventana de confirmación */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px;z-index:60}
+    .modal.hidden{display:none}
+    .modalBox{background:#fff;border-radius:16px;padding:20px;max-width:420px;width:100%}
+    .modalBox p{font-size:1.2rem;margin:0 0 18px}
+    .modalBtns{display:flex;gap:10px}
+    .modalBtns .btn{flex:1}
+
+    /* Celular: que la tabla quepa completa sin deslizar */
+    @media (max-width:480px){
+      .container{padding:10px}
+      .card{padding:12px 8px}
+      th,td{padding:2px}
+      th{font-size:.8rem}
+      td.name, th.name{min-width:0;max-width:84px;padding:4px;font-size:.9rem}
+      td.total, th.total{min-width:0}
+      .cell{width:36px;height:40px;font-size:1.4rem;border-radius:8px}
+    }
+
+    .hidden{display:none}
+    footer{margin-top:20px;color:var(--muted);font-size:.85rem;text-align:center}
   </style>
 </head>
 <body>
   <div class="container">
     <header>
-      <div>
-        <h1>Registro de asistencia</h1>
-        <div class="meta" id="currentMeta">Cargando fecha...</div>
-      </div>
-      <div class="flex">
-        <div class="badge" id="weekBadge">Semana ?</div>
-      </div>
+      <h1>Lista de asistencia</h1>
+      <div class="muted" id="todayText"></div>
+      <div id="status">✔ Todo guardado</div>
     </header>
 
-    <section class="card">
-      <strong>Trabajadores</strong>
-      <div class="note">Recuerda no guardar dos registros el mismo dia</div>
+    <nav class="tabs">
+      <button class="tab active" id="tabLista">📋 Lista</button>
+      <button class="tab" id="tabTrab">👷 Trabajadores</button>
+    </nav>
 
-      <!-- Removed: input + add/reset controls. Workers list remains. -->
-      <div class="workers card" id="workersList" aria-live="polite"></div>
+    <!-- PANTALLA 1: LISTA -->
+    <section id="pageLista">
+      <div class="card">
+        <div class="weekNav">
+          <div class="weekTitle" id="weekTitle"></div>
+          <button class="btn gray" id="prevWeek">◀ Semana pasada</button>
+          <button class="btn gray" id="nextWeek">Semana siguiente ▶</button>
+        </div>
+        <button class="btn hidden" id="goToday" style="width:100%;margin-top:8px">Regresar a esta semana</button>
 
-      <div style="margin-top:12px" class="flex">
-        <button id="registerBtn">Registrar</button>
-        <button id="showAll" class="ghost small">Ver registros</button>
-        <button id="clearRecords" class="danger small">Borrar local</button>
-      </div>
+        <div class="help">
+          Toca el cuadrito para marcar que <b>sí vino</b> ese día (se pone verde ✓).<br>
+          Si te equivocas, tócalo otra vez y se quita.<br>
+          Si se te olvidó un día, solo márcalo después. Se guarda solo.
+        </div>
 
-      <div id="feedback" class="note"></div>
-    </section>
-
-    <section class="card summary">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <strong>Historial / Resumen (desde Firebase)</strong>
-        <div class="flex">
-          <select id="filterWeek">
-            <option value="all">Todas las semanas</option>
-          </select>
-          <button id="refreshSummary" class="small ghost">Refrescar</button>
+        <div class="tableWrap">
+          <table id="grid"></table>
         </div>
       </div>
-
-      <div id="summaryContainer"></div>
     </section>
 
-    <footer>
-      Construcciones Contreras en Colaboración del Ingeniero Contreras.
-    </footer>
+    <!-- PANTALLA 2: TRABAJADORES -->
+    <section id="pageTrab" class="hidden">
+      <div class="card">
+        <h2>Agregar un trabajador</h2>
+        <div class="addRow">
+          <input type="text" id="newName" placeholder="Escribe el nombre aquí" autocomplete="off" />
+          <button class="btn green" id="addBtn">➕ Agregar</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Mis trabajadores</h2>
+        <div class="muted" style="font-size:1rem">Si quitas a alguien, sus días anteriores no se borran.</div>
+        <ul class="wlist" id="wlist"></ul>
+      </div>
+    </section>
+
+    <footer>Construcciones Contreras en Colaboración del Ingeniero Contreras.</footer>
+  </div>
+
+  <div id="toast"></div>
+
+  <div class="modal hidden" id="modal">
+    <div class="modalBox">
+      <p id="modalText"></p>
+      <div class="modalBtns">
+        <button class="btn gray" id="modalNo">No, regresar</button>
+        <button class="btn red" id="modalYes">Sí</button>
+      </div>
+    </div>
   </div>
 
   <script>
-    // --- Utilidades de fecha ---
-    const dayNames = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-
-    function getISOWeekNumber(date) {
-      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-      d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-      const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-      const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
-      return { week: weekNo, year: d.getUTCFullYear() };
-    }
-
-    function formatDateLocal(date){
-      return date.toLocaleDateString();
-    }
-
-    // --- Storage keys ---
-    const KEY_WORKERS = 'attendance_workers_v1';
-    const KEY_RECORDS = 'attendance_records_v1'; // se usa para offline/local
-
-    // --- Default workers (edítalos solo en el código) ---
+    // ================= AJUSTES =================
+    // Trabajadores iniciales (solo se usan la primera vez; después se editan desde la app)
     const DEFAULT_WORKERS = ["Fer","Sebas","Don Fer","Gordo","Toñito","Migue","Yorby"];
+    // 6 = de lunes a sábado. Cambia a 7 si también se trabaja en domingo.
+    const DIAS_VISIBLES = 6;
 
-    // FORZAR uso de DEFAULT_WORKERS: ignorar cualquier lista guardada en localStorage
-    function loadWorkers(){
-      return DEFAULT_WORKERS.slice();
-    }
-    function saveWorkers(list){ /* no-op: no se usa desde UI */ }
-
-    function loadRecords(){ try{const raw=localStorage.getItem(KEY_RECORDS); return raw?JSON.parse(raw):[];}catch(e){console.error(e);return[]} }
-    function saveRecords(records){ localStorage.setItem(KEY_RECORDS, JSON.stringify(records)); }
-
-    // --- UI ---
-    const workersListEl = document.getElementById('workersList');
-    const feedback = document.getElementById('feedback');
-    const weekBadge = document.getElementById('weekBadge');
-    const currentMeta = document.getElementById('currentMeta');
-
-    function renderWorkers(){
-      const workers = loadWorkers();
-      workersListEl.innerHTML = '';
-      workers.forEach((w, idx)=>{
-        const id = 'w_'+idx;
-        const label = document.createElement('label');
-        label.className = 'worker';
-        label.innerHTML = `<input type='checkbox' data-worker-index='${idx}' id='${id}'/><span>${w}</span>`;
-        workersListEl.appendChild(label);
-      });
-    }
-
-    function renderCurrentMeta(){
-      const now = new Date();
-      const dayName = dayNames[now.getDay()];
-      const iso = getISOWeekNumber(now);
-      currentMeta.textContent = `${dayName}, ${formatDateLocal(now)} — Semana ${iso.week} (${iso.year})`;
-      weekBadge.textContent = `Semana ${iso.week} / ${iso.year}`;
-    }
-
-    // --- Firebase config (deja como está) ---
-    const FIREBASE_ENABLED = true;
     const firebaseConfig = {
       apiKey: "AIzaSyAwky0ciFYNgprLHFb6sOA4TThLeb20d08",
       authDomain: "ingresotrabajadores-f2d8e.firebaseapp.com",
@@ -150,208 +179,344 @@
       measurementId: "G-X99PFZ53YZ"
     };
 
-    function loadFirebaseSDKs(){
-      if(!FIREBASE_ENABLED) return Promise.resolve();
-      if(window.firebase) return Promise.resolve();
-      return new Promise((resolve, reject)=>{
-        const urls = [
-          'https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js',
-          'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js'
-        ];
-        let loaded = 0;
-        urls.forEach(u=>{
-          const s = document.createElement('script'); s.src = u;
-          s.onload = ()=>{ loaded++; if(loaded===urls.length) resolve(); };
-          s.onerror = (e)=> reject(e);
-          document.head.appendChild(s);
+    // ================= FECHAS =================
+    const dayNames = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+    const dayShort = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    const monthNames = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+    const pad = n => String(n).padStart(2,'0');
+    const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const fromYmd = k => { const [y,m,d] = k.split('-').map(Number); return new Date(y, m-1, d); };
+    const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+    const mondayOf = d => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); return addDays(x, -((x.getDay()+6)%7)); };
+    const noonISO = k => { const d = fromYmd(k); d.setHours(12); return d.toISOString(); };
+    const longDay = k => { const d = fromYmd(k); return `${dayNames[d.getDay()]} ${d.getDate()} de ${monthNames[d.getMonth()]}`; };
+
+    // ================= ALMACENAMIENTO LOCAL =================
+    const KEY_TRAB = 'servando_trabajadores_v2';
+    const KEY_TRAB_PEND = 'servando_trabajadores_pendiente_v2';
+    const KEY_ASIS = 'servando_asistencia_v2';
+    const KEY_PEND = 'servando_pendientes_v2';
+
+    function loadJSON(key, fallback){ try{ const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; }catch(e){ return fallback; } }
+    function saveJSON(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
+
+    let workers = loadJSON(KEY_TRAB, null) || DEFAULT_WORKERS.slice();
+    let workersPending = loadJSON(KEY_TRAB_PEND, false);
+    let att = loadJSON(KEY_ASIS, {});            // { 'AAAA-MM-DD': ['Fer','Sebas'] }
+    let pending = new Set(loadJSON(KEY_PEND, [])); // días que faltan por subir a internet
+    let docsByDate = {};                          // { 'AAAA-MM-DD': [ids de Firestore] }
+    let db = null;
+    let weekStart = mondayOf(new Date());
+
+    function saveLocalAtt(){ saveJSON(KEY_ASIS, att); saveJSON(KEY_PEND, [...pending]); }
+    function saveLocalWorkers(){ saveJSON(KEY_TRAB, workers); saveJSON(KEY_TRAB_PEND, workersPending); }
+
+    // ================= MENSAJES =================
+    const statusEl = document.getElementById('status');
+    let inFlight = 0;
+    function updateStatus(){
+      if(inFlight > 0 || pending.size > 0 || workersPending){
+        if(!navigator.onLine || !db){ statusEl.className = 'offline'; statusEl.textContent = '📵 Sin internet — se subirá solo cuando haya señal'; }
+        else { statusEl.className = 'saving'; statusEl.textContent = '⏳ Guardando…'; }
+      } else { statusEl.className = ''; statusEl.textContent = '✔ Todo guardado'; }
+    }
+    window.addEventListener('online', ()=>{ updateStatus(); syncPending(); });
+    window.addEventListener('offline', updateStatus);
+
+    const toastEl = document.getElementById('toast');
+    let toastTimer;
+    function toast(msg){
+      toastEl.textContent = msg; toastEl.classList.add('show');
+      clearTimeout(toastTimer); toastTimer = setTimeout(()=>toastEl.classList.remove('show'), 2500);
+    }
+
+    function ask(text, yesLabel){
+      return new Promise(resolve=>{
+        const modal = document.getElementById('modal');
+        document.getElementById('modalText').textContent = text;
+        const yes = document.getElementById('modalYes'), no = document.getElementById('modalNo');
+        yes.textContent = yesLabel || 'Sí';
+        const close = v => { modal.classList.add('hidden'); yes.onclick = no.onclick = null; resolve(v); };
+        yes.onclick = ()=>close(true); no.onclick = ()=>close(false);
+        modal.classList.remove('hidden');
+      });
+    }
+
+    // ================= PESTAÑAS =================
+    function showTab(which){
+      const lista = which === 'lista';
+      document.getElementById('pageLista').classList.toggle('hidden', !lista);
+      document.getElementById('pageTrab').classList.toggle('hidden', lista);
+      document.getElementById('tabLista').classList.toggle('active', lista);
+      document.getElementById('tabTrab').classList.toggle('active', !lista);
+      if(lista) renderGrid(); else renderWorkers();
+    }
+    document.getElementById('tabLista').onclick = ()=>showTab('lista');
+    document.getElementById('tabTrab').onclick = ()=>showTab('trab');
+
+    // ================= LISTA SEMANAL =================
+    function renderGrid(){
+      const today = new Date();
+      const todayKey = ymd(today);
+      document.getElementById('todayText').textContent =
+        `Hoy es ${dayNames[today.getDay()]} ${today.getDate()} de ${monthNames[today.getMonth()]} de ${today.getFullYear()}`;
+
+      const days = [];
+      for(let i=0; i<DIAS_VISIBLES; i++) days.push(ymd(addDays(weekStart, i)));
+
+      const first = fromYmd(days[0]), last = fromYmd(days[days.length-1]);
+      const isThisWeek = ymd(weekStart) === ymd(mondayOf(today));
+      document.getElementById('weekTitle').textContent = (isThisWeek ? 'Esta semana: ' : 'Semana: ') +
+        `del ${first.getDate()} de ${monthNames[first.getMonth()]} al ${last.getDate()} de ${monthNames[last.getMonth()]}`;
+      document.getElementById('nextWeek').disabled = isThisWeek;
+      document.getElementById('goToday').classList.toggle('hidden', isThisWeek);
+
+      // Trabajadores actuales + los que ya no están pero tienen días en esta semana
+      const names = workers.slice();
+      const former = new Set();
+      days.forEach(k => (att[k]||[]).forEach(n => { if(!names.includes(n)){ names.push(n); former.add(n); } }));
+
+      const table = document.getElementById('grid');
+      table.innerHTML = '';
+
+      const head = document.createElement('tr');
+      const thName = document.createElement('th'); thName.className = 'name'; thName.textContent = 'Nombre'; head.appendChild(thName);
+      days.forEach(k=>{
+        const d = fromYmd(k);
+        const th = document.createElement('th');
+        if(k === todayKey){ th.className = 'today'; th.innerHTML = '<span class="hoy">HOY</span>'; }
+        th.appendChild(document.createTextNode(dayShort[d.getDay()]));
+        const num = document.createElement('span'); num.className = 'num'; num.textContent = d.getDate(); th.appendChild(num);
+        head.appendChild(th);
+      });
+      const thTot = document.createElement('th'); thTot.className = 'total'; thTot.textContent = 'Días'; head.appendChild(thTot);
+      table.appendChild(head);
+
+      if(names.length === 0){
+        const tr = document.createElement('tr'); const td = document.createElement('td');
+        td.colSpan = days.length + 2; td.style.padding = '16px';
+        td.textContent = 'No hay trabajadores. Ve a la pestaña "Trabajadores" para agregarlos.';
+        tr.appendChild(td); table.appendChild(tr); return;
+      }
+
+      names.forEach(name=>{
+        const tr = document.createElement('tr');
+        const tdName = document.createElement('td'); tdName.className = 'name'; tdName.textContent = name;
+        if(former.has(name)){ const s = document.createElement('span'); s.className = 'gone'; s.textContent = '(ya no está)'; tdName.appendChild(s); }
+        tr.appendChild(tdName);
+
+        let total = 0;
+        days.forEach(k=>{
+          const td = document.createElement('td'); if(k === todayKey) td.className = 'today';
+          const b = document.createElement('button'); b.className = 'cell';
+          const on = (att[k]||[]).includes(name);
+          if(on){ b.classList.add('on'); b.textContent = '✓'; total++; }
+          if(k > todayKey){ b.classList.add('future'); b.disabled = true; b.setAttribute('aria-label', 'Día que todavía no llega'); }
+          else {
+            b.setAttribute('aria-label', `${name}, ${longDay(k)}: ${on ? 'sí vino' : 'no marcado'}`);
+            b.onclick = ()=>toggle(name, k);
+          }
+          td.appendChild(b); tr.appendChild(td);
         });
+
+        const tdTot = document.createElement('td'); tdTot.className = 'total'; tdTot.textContent = total;
+        tr.appendChild(tdTot);
+        table.appendChild(tr);
       });
     }
 
-    function initFirebaseApp(){
-      if(!FIREBASE_ENABLED) return Promise.resolve();
-      return loadFirebaseSDKs().then(()=>{
-        if(!window.firebase) throw new Error('Firebase SDK no cargado');
-        if(!firebase.apps.length){ firebase.initializeApp(firebaseConfig); }
-        window.db = firebase.firestore();
-      });
+    function toggle(name, k){
+      const list = (att[k] || []).slice();
+      const i = list.indexOf(name);
+      if(i >= 0) list.splice(i, 1); else list.push(name);
+      att[k] = list;
+      pending.add(k); saveLocalAtt();
+      renderGrid();
+      toast(i >= 0 ? `Quitado: ${name} el ${longDay(k)}` : `✔ Anotado: ${name} vino el ${longDay(k)}`);
+      pushDay(k);
     }
 
-    // --- Push a Firebase: solo dos campos (Fecha, Trabajadores) como strings ---
-    function pushRecordToFirebase_minimal(rec){
-      if(!FIREBASE_ENABLED) return Promise.reject(new Error('FIREBASE_DISABLED'));
-      return initFirebaseApp().then(()=>{
-        const data = {
-          Fecha: rec.dateISO, // ISO string
-          Trabajadores: Array.isArray(rec.workers) ? rec.workers.join(';') : String(rec.workers)
+    document.getElementById('prevWeek').onclick = ()=>{ weekStart = addDays(weekStart, -7); renderGrid(); };
+    document.getElementById('nextWeek').onclick = ()=>{ weekStart = addDays(weekStart, 7); renderGrid(); };
+    document.getElementById('goToday').onclick = ()=>{ weekStart = mondayOf(new Date()); renderGrid(); };
+
+    // ================= TRABAJADORES =================
+    function renderWorkers(){
+      const ul = document.getElementById('wlist');
+      ul.innerHTML = '';
+      if(workers.length === 0){
+        const li = document.createElement('li'); li.className = 'muted'; li.textContent = 'Todavía no hay trabajadores.'; ul.appendChild(li); return;
+      }
+      workers.forEach((name, idx)=>{
+        const li = document.createElement('li');
+        const span = document.createElement('span'); span.className = 'wname'; span.textContent = name;
+        const edit = document.createElement('button'); edit.className = 'btn gray'; edit.textContent = '✏️ Cambiar nombre';
+        const del = document.createElement('button'); del.className = 'btn red'; del.textContent = '🗑️ Quitar';
+        edit.onclick = ()=>startEdit(li, idx);
+        del.onclick = async ()=>{
+          if(!await ask(`¿Seguro que quieres quitar a ${name}?\n\nSus días anteriores no se borran.`, 'Sí, quitar')) return;
+          workers.splice(idx, 1); saveWorkers(); renderWorkers();
+          toast(`Se quitó a ${name}`);
         };
-        // colección "Registros" (asegúrate que en Firestore existe/puede escribirse)
-        return db.collection('Registros').add(data);
+        li.append(span, edit, del);
+        ul.appendChild(li);
       });
     }
 
-    // --- Fetch from Firebase and render ONLY those two fields, grouped por semana ---
-    async function fetchAndRenderFromFirebase(filterWeekKey){
-      if(!FIREBASE_ENABLED){ feedback.textContent='Firebase no habilitado'; return; }
-      try{
-        await initFirebaseApp();
-        const snapshot = await db.collection('Registros').orderBy('Fecha','desc').get();
-        const recs = snapshot.docs.map(doc=>{
-          const d = doc.data() || {};
-          const dateISO = d.Fecha || new Date().toISOString();
-          const dt = new Date(dateISO);
-          const iso = getISOWeekNumber(dt);
-          return {
-            id: doc.id,
-            dateISO,
-            dateDisplay: dt.toLocaleDateString(),
-            dayName: dayNames[dt.getDay()] || '',
-            week: iso.week,
-            year: iso.year,
-            workers: d.Trabajadores ? String(d.Trabajadores).split(';').map(s=>s.trim()).filter(Boolean) : []
-          };
-        });
+    function startEdit(li, idx){
+      const old = workers[idx];
+      li.innerHTML = '';
+      const input = document.createElement('input'); input.type = 'text'; input.value = old;
+      const ok = document.createElement('button'); ok.className = 'btn green'; ok.textContent = '✔ Guardar';
+      const cancel = document.createElement('button'); cancel.className = 'btn gray'; cancel.textContent = 'Cancelar';
+      const save = ()=>{
+        const nuevo = cleanName(input.value);
+        if(!nuevo){ toast('Escribe un nombre'); return; }
+        if(nuevo !== old && workers.some(w => w.toLowerCase() === nuevo.toLowerCase())){ toast(`Ya hay alguien que se llama ${nuevo}`); return; }
+        if(nuevo !== old) renameWorker(old, nuevo);
+        renderWorkers();
+        toast('✔ Nombre cambiado');
+      };
+      ok.onclick = save; cancel.onclick = renderWorkers;
+      input.onkeydown = e => { if(e.key === 'Enter') save(); };
+      li.append(input, ok, cancel);
+      input.focus();
+    }
 
-        renderRecordsGrouped(recs, filterWeekKey);
-        feedback.textContent = `Registros cargados desde Firebase (${recs.length})`;
-        feedback.style.color = 'var(--muted)';
+    function renameWorker(old, nuevo){
+      workers[workers.indexOf(old)] = nuevo;
+      saveWorkers();
+      // También cambia el nombre en los días ya marcados
+      Object.keys(att).forEach(k=>{
+        const list = att[k];
+        const i = list.indexOf(old);
+        if(i >= 0){ list[i] = nuevo; pending.add(k); }
+      });
+      saveLocalAtt();
+      syncPending();
+    }
+
+    const cleanName = s => s.replace(/;/g, ' ').replace(/\s+/g, ' ').trim();
+
+    function addWorker(){
+      const input = document.getElementById('newName');
+      const name = cleanName(input.value);
+      if(!name){ toast('Primero escribe el nombre'); input.focus(); return; }
+      if(workers.some(w => w.toLowerCase() === name.toLowerCase())){ toast(`${name} ya está en la lista`); return; }
+      workers.push(name); saveWorkers();
+      input.value = '';
+      renderWorkers();
+      toast(`✔ Se agregó a ${name}`);
+    }
+    document.getElementById('addBtn').onclick = addWorker;
+    document.getElementById('newName').onkeydown = e => { if(e.key === 'Enter') addWorker(); };
+
+    // ================= FIREBASE =================
+    function loadFirebaseSDKs(){
+      if(window.firebase) return Promise.resolve();
+      const load = src => new Promise((res, rej)=>{ const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+      return load('https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js')
+        .then(()=>load('https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js'));
+    }
+
+    async function initFirebase(){
+      await loadFirebaseSDKs();
+      if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      const fs = firebase.firestore();
+      try{ await fs.enablePersistence({ synchronizeTabs: true }); }catch(e){ /* sin caché offline, no pasa nada */ }
+      db = fs;
+    }
+
+    // Guarda un día en Firebase (colección "Registros": Fecha + Trabajadores)
+    async function pushDay(k){
+      updateStatus();
+      if(!db) return;
+      const names = att[k] || [];
+      let ids = docsByDate[k];
+      if(!ids || !ids.length) ids = docsByDate[k] = ['dia_' + k];
+      inFlight++; updateStatus();
+      try{
+        const batch = db.batch();
+        batch.set(db.collection('Registros').doc(ids[0]), { Fecha: noonISO(k), Trabajadores: names.join(';') }, { merge: true });
+        // Registros viejos del mismo día: se vacían porque ya quedaron juntados en el primero
+        ids.slice(1).forEach(id => batch.update(db.collection('Registros').doc(id), { Trabajadores: '' }));
+        await batch.commit();
+        if((att[k] || []).join(';') === names.join(';')){ pending.delete(k); saveLocalAtt(); }
       }catch(e){
-        console.error(e);
-        feedback.textContent = 'Error cargando registros desde Firebase: '+(e.message||e);
-        feedback.style.color = 'var(--muted)';
+        console.error('Error guardando en Firebase:', e);
+      }finally{
+        inFlight--; updateStatus();
       }
     }
 
-    // --- Render agrupado (reutiliza estructura existente) ---
-    function renderRecordsGrouped(records, filterWeekKey){
-      const container = document.getElementById('summaryContainer');
-      if(!records || records.length===0){ container.innerHTML = '<div class="note">No hay registros todavía.</div>'; populateFilter([]); return; }
-      const groups = {};
-      records.forEach(rec=>{
-        const key = rec.year + '-W' + String(rec.week).padStart(2,'0');
-        if(!groups[key]) groups[key]=[];
-        groups[key].push(rec);
-      });
-      const keys = Object.keys(groups).sort().reverse();
-      populateFilter(keys);
+    function syncPending(){ [...pending].forEach(k => pushDay(k)); if(workersPending) pushWorkers(); }
 
-      let html = '';
-      keys.forEach(key=>{
-        if(filterWeekKey && filterWeekKey!=='all' && key!==filterWeekKey) return;
-        html += `<div class="weekGroup"><div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${key}</strong> <span class="meta">(${groups[key].length} registros)</span></div><div class="badge">${key.split('-W')[1]} / ${key.split('-W')[0]}</div></div>`;
-        groups[key].sort((a,b)=>b.dateISO.localeCompare(a.dateISO)).forEach(r=>{
-          html += `<div style="margin-top:8px;padding:8px;border-radius:8px;background:rgba(255,255,255,0.01)"><div style="display:flex;justify-content:space-between"><div><strong>${r.dayName} ${r.dateDisplay}</strong></div><div class="meta">${r.workers.length} presentes</div></div><div class="meta">${r.workers.join(', ')}</div></div>`;
-        });
-        html += `</div>`;
+    async function loadRemoteAttendance(){
+      const snap = await db.collection('Registros').get();
+      const map = {}, docs = {};
+      snap.forEach(doc=>{
+        const d = doc.data() || {};
+        if(!d.Fecha) return;
+        const dt = new Date(d.Fecha);
+        if(isNaN(dt)) return;
+        const k = ymd(dt);
+        (docs[k] = docs[k] || []).push(doc.id);
+        map[k] = map[k] || [];
+        String(d.Trabajadores || '').split(';').map(s=>s.trim()).filter(Boolean)
+          .forEach(n => { if(!map[k].includes(n)) map[k].push(n); });
       });
-      container.innerHTML = html;
+      // Lo que se marcó sin internet manda sobre lo de la nube
+      pending.forEach(k => { map[k] = att[k] || []; });
+      att = map; docsByDate = docs;
+      saveLocalAtt();
     }
 
-    function populateFilter(keys){
-      const sel = document.getElementById('filterWeek');
-      const prev = sel.value || 'all';
-      sel.innerHTML = '<option value="all">Todas las semanas</option>';
-      keys.forEach(k=>{ const opt = document.createElement('option'); opt.value = k; opt.textContent = k; sel.appendChild(opt); });
-      try{ sel.value = prev; }catch(e){}
+    // Lista de trabajadores en Firebase (colección "Configuracion", documento "trabajadores")
+    function saveWorkers(){
+      workersPending = true; saveLocalWorkers();
+      pushWorkers();
+    }
+    async function pushWorkers(){
+      updateStatus();
+      if(!db) return;
+      inFlight++; updateStatus();
+      try{
+        const sent = workers.slice();
+        await db.collection('Configuracion').doc('trabajadores').set({ Lista: sent });
+        if(sent.join(';') === workers.join(';')){ workersPending = false; saveLocalWorkers(); }
+      }catch(e){
+        console.error('Error guardando trabajadores en Firebase:', e);
+      }finally{
+        inFlight--; updateStatus();
+      }
+    }
+    async function loadRemoteWorkers(){
+      if(workersPending) return pushWorkers();
+      const snap = await db.collection('Configuracion').doc('trabajadores').get();
+      if(snap.exists && Array.isArray(snap.data().Lista)){ workers = snap.data().Lista; saveLocalWorkers(); }
+      else { workersPending = true; await pushWorkers(); }
     }
 
-    document.getElementById('filterWeek').addEventListener('change', ()=>{
-      fetchAndRenderFromFirebase(document.getElementById('filterWeek').value);
+    async function refreshFromCloud(){
+      if(!db) return;
+      try{ await loadRemoteWorkers(); }catch(e){ console.error(e); }
+      try{ await loadRemoteAttendance(); }catch(e){ console.error(e); }
+      if(document.getElementById('pageLista').classList.contains('hidden')) renderWorkers(); else renderGrid();
+      syncPending();
+    }
+
+    // Al volver a abrir la app, trae lo más nuevo
+    document.addEventListener('visibilitychange', ()=>{
+      if(document.visibilityState !== 'visible') return;
+      renderGrid(); // por si cambió el día mientras estaba cerrada
+      if(inFlight === 0) refreshFromCloud();
     });
 
-    document.getElementById('refreshSummary').addEventListener('click', ()=>fetchAndRenderFromFirebase(document.getElementById('filterWeek').value));
-
-    document.getElementById('showAll').addEventListener('click', ()=>fetchAndRenderFromFirebase('all'));
-
-    // --- Registrar asistencia: guarda local y TAMBIÉN en Firebase (solo Fecha y Trabajadores) ---
-    document.getElementById('registerBtn').addEventListener('click', ()=>{
-      const now = new Date();
-      const iso = getISOWeekNumber(now);
-      const workers = loadWorkers();
-      const checked = [];
-      document.querySelectorAll('#workersList input[type=checkbox]').forEach(i=>{
-        if(i.checked){ const idx = parseInt(i.dataset.workerIndex,10); if(workers[idx]) checked.push(workers[idx]); }
-      });
-
-      if(checked.length===0){ feedback.textContent = 'Ningún trabajador marcado. Marca al menos uno antes de registrar.'; feedback.style.color = 'var(--muted)'; return; }
-
-      const records = loadRecords();
-      const rec = {
-        id: Date.now(),
-        dateISO: now.toISOString(),
-        dateDisplay: formatDateLocal(now),
-        dayName: dayNames[now.getDay()],
-        week: iso.week,
-        year: iso.year,
-        workers: checked
-      };
-      records.push(rec);
-      saveRecords(records);
-
-      // push minimal a Firebase (solo Fecha y Trabajadores)
-      pushRecordToFirebase_minimal(rec).then(()=>{
-        feedback.textContent = `Registrado local y en Firebase: ${checked.join(', ')} — ${rec.dateDisplay}`;
-        feedback.style.color = 'var(--ok)';
-      }).catch(e=>{
-        // mostrar error detallado en UI y consola
-        console.error('Error subiendo a Firebase:', e);
-        let msg = 'Registrado localmente (error subiendo a Firebase).';
-        if(e && e.code) msg += ' Código: ' + e.code;
-        if(e && e.message) msg += ' Mensaje: ' + e.message;
-        feedback.textContent = msg;
-        feedback.style.color = 'var(--muted)';
-      });
-
-      document.querySelectorAll('#workersList input[type=checkbox]').forEach(i=>i.checked=false);
-      renderSummary();
-    });
-
-    // --- Mantengo funcionalidad local de resumen (por defecto mostramos lo local) ---
-    function renderSummary(filterWeekKey){
-      const container = document.getElementById('summaryContainer');
-      const records = loadRecords().sort((a,b)=>b.id-a.id);
-      if(records.length===0){ container.innerHTML = '<div class="note">No hay registros locales todavía.</div>'; populateFilter([]); return; }
-      const groups = groupRecordsByWeek(records);
-      populateFilter(Object.keys(groups).sort().reverse());
-
-      let html = '';
-      const groupKeys = Object.keys(groups).sort().reverse();
-      groupKeys.forEach(key=>{
-        if(filterWeekKey && filterWeekKey!=='all' && key!==filterWeekKey) return;
-        html += `<div class="weekGroup"><div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${key}</strong> <span class="meta">(${groups[key].length} registros)</span></div><div class="badge">${key.split('-W')[1]} / ${key.split('-W')[0]}</div></div>`;
-        groups[key].sort((a,b)=>b.id-a.id).forEach(r=>{
-          html += `<div style="margin-top:8px;padding:8px;border-radius:8px;background:rgba(255,255,255,0.01)"><div style="display:flex;justify-content:space-between"><div><strong>${r.dayName} ${r.dateDisplay}</strong></div><div class="meta">${r.workers.length} presentes</div></div><div class="meta">${r.workers.join(', ')}</div></div>`;
-        });
-        html += `</div>`;
-      });
-      container.innerHTML = html;
-    }
-
-    function groupRecordsByWeek(records){
-      const groups = {};
-      records.forEach(rec=>{
-        const key = rec.year + '-W' + String(rec.week).padStart(2,'0');
-        if(!groups[key]) groups[key]=[];
-        groups[key].push(rec);
-      });
-      return groups;
-    }
-
-    // removed add/reset event listeners (no UI to add workers)
-
-    document.getElementById('clearRecords').addEventListener('click', ()=>{ if(!confirm('¿Borrar todos los registros locales? Esta acción no se puede deshacer.')) return; localStorage.removeItem(KEY_RECORDS); renderSummary(); feedback.textContent='Registros locales borrados.'; feedback.style.color='var(--muted)'; });
-
-    // --- Inicializacion ---
-    function init(){
-      // ensure stored old workers list does not override DEFAULT_WORKERS
-      try{ localStorage.removeItem(KEY_WORKERS); }catch(e){}
-      renderWorkers();
-      renderCurrentMeta();
-      renderSummary();
-      setInterval(()=>{ renderCurrentMeta(); }, 60*1000);
-    }
-    init();
-
+    // ================= INICIO =================
+    renderGrid();
+    updateStatus();
+    initFirebase().then(refreshFromCloud).catch(e=>{ console.error('No se pudo cargar Firebase', e); updateStatus(); });
   </script>
 </body>
 </html>
